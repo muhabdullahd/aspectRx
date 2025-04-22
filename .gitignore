@@ -1,0 +1,51 @@
+# Create or append to .gitignore
+cat >> .gitignore << EOL
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Models and checkpoints
+saved_model/
+models/*/saved_model/
+models/*/results/checkpoint-*/
+models/*/checkpoints/
+*.h5
+*.pt
+*.pth
+*.ckpt
+*.bin
+
+# Logs
+logs/
+*.log
+models/*/logs/
+
+# Large datasets (if needed)
+Dataset/
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
+EOL
