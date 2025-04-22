@@ -1,0 +1,42 @@
+CADEC ABSA Dataset Statistics
+==============================
+
+1. Basic Statistics
+--------------------
+Total samples: 9111
+Unique reviews: 1186
+Average annotations per review: 7.68
+
+2. Sentiment Distribution
+--------------------
+Negative: 6486 (71.2%)
+Neutral: 2415 (26.5%)
+Positive: 210 (2.3%)
+
+3. Entity Type Distribution
+--------------------
+ADR: 6318 (69.3%)
+Drug: 1800 (19.8%)
+Finding: 435 (4.8%)
+Disease: 283 (3.1%)
+Symptom: 275 (3.0%)
+
+4. Token Length Statistics
+--------------------
+Min tokens: 2
+Max tokens: 831
+Mean tokens: 144.41
+Median tokens: 126.0
+
+5. Top 10 Aspect Categories
+--------------------
+MEDICATION#SIDE-EFFECT: 6153 (67.5%)
+MEDICATION#GENERAL: 1799 (19.7%)
+CONDITION#FINDING: 435 (4.8%)
+CONDITION#DISEASE: 283 (3.1%)
+CONDITION#SYMPTOM: 273 (3.0%)
+MEDICATION#SIDE-EFFECT:MYALGIA: 19 (0.2%)
+MEDICATION#SIDE-EFFECT:MUSCLESPASM: 10 (0.1%)
+MEDICATION#SIDE-EFFECT:WEAKNESS: 8 (0.1%)
+MEDICATION#SIDE-EFFECT:INSOMNIA: 6 (0.1%)
+MEDICATION#SIDE-EFFECT:DEPRESSION: 6 (0.1%)

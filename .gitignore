@@ -1,51 +1,45 @@
-# Create or append to .gitignore
-cat >> .gitignore << EOL
-# Python
+# Ignore large data files
+*.tsv
+*.csv
+*.json
+*.pkl
+
+# Allow specific small data files that should be tracked
+!requirements.txt
+!package.json
+!package-lock.json
+
+# Ignore the entire Cadec_Data folder (large raw data)
+/Cadec_Data/
+Dataset/
+
+# Keep processed statistics but not raw data
+!/dataset_stats/*.txt
+!/dataset_stats/*.png
+
+# Python cache files
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-build/
-develop-eggs/
+
+# Distribution / packaging
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
+build/
 *.egg-info/
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Models and checkpoints
-saved_model/
-models/*/saved_model/
-models/*/results/checkpoint-*/
-models/*/checkpoints/
-*.h5
-*.pt
-*.pth
-*.ckpt
-*.bin
-
-# Logs
-logs/
-*.log
-models/*/logs/
-
-# Large datasets (if needed)
-Dataset/
-
-# Environment
-.env
-.venv
-env/
+# Virtual environments
 venv/
+env/
 ENV/
-EOL
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+paper
