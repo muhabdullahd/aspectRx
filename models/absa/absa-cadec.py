@@ -96,16 +96,20 @@ def tokenize_dataset(dataset, tokenizer):
     return tokenized_dataset
 
 def compute_metrics(pred):
-    """Compute metrics for evaluation."""
     labels = pred.label_ids
     preds = pred.predictions.argmax(-1)
     
+    # Standard metrics
     accuracy = accuracy_score(labels, preds)
-    f1 = f1_score(labels, preds)
+    
+    # Use macro-F1 or weighted-F1 for imbalanced data
+    f1_macro = f1_score(labels, preds, average='macro')
+    f1_weighted = f1_score(labels, preds, average='weighted')
     
     return {
         "accuracy": accuracy,
-        "f1": f1
+        "f1_macro": f1_macro,
+        "f1_weighted": f1_weighted
     }
 
 def train_cadec_model(train_dataset, val_dataset):
@@ -130,6 +134,8 @@ def train_cadec_model(train_dataset, val_dataset):
         evaluation_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
+        metric_for_best_model="f1_weighted",  # Use weighted F1 for imbalanced data
+        greater_is_better=True,
     )
     
     # Create list to store evaluation metrics manually
@@ -139,18 +145,31 @@ def train_cadec_model(train_dataset, val_dataset):
     def compute_metrics(pred):
         labels = pred.label_ids
         preds = pred.predictions.argmax(-1)
+        
+        # Standard metrics
         accuracy = accuracy_score(labels, preds)
-        f1 = f1_score(labels, preds)
+        
+        # Use multiple F1 score calculations for imbalanced data
+        f1 = f1_score(labels, preds)  # Standard binary F1
+        f1_macro = f1_score(labels, preds, average='macro')
+        f1_weighted = f1_score(labels, preds, average='weighted')
         
         # Store metrics
         current_metrics = {
             "accuracy": float(accuracy),
             "f1": float(f1),
+            "f1_macro": float(f1_macro),
+            "f1_weighted": float(f1_weighted),
             "step": len(eval_metrics) + 1
         }
         eval_metrics.append(current_metrics)
         
-        return {"accuracy": accuracy, "f1": f1}
+        return {
+            "accuracy": accuracy,
+            "f1": f1,
+            "f1_macro": f1_macro,
+            "f1_weighted": f1_weighted
+        }
     
     # Create trainer
     trainer = Trainer(
@@ -186,7 +205,9 @@ def evaluate_model(trainer, tokenized_test):
     results = trainer.evaluate(tokenized_test)
     
     print(f"Test accuracy: {results['eval_accuracy']:.4f}")
-    print(f"Test F1 score: {results['eval_f1']:.4f}")
+    print(f"Test F1 score (standard): {results['eval_f1']:.4f}")
+    print(f"Test F1 score (macro): {results['eval_f1_macro']:.4f}")
+    print(f"Test F1 score (weighted): {results['eval_f1_weighted']:.4f}")
     
     # Get predictions
     predictions = trainer.predict(tokenized_test)
@@ -239,8 +260,21 @@ def main():
     # Load the CADEC ABSA datasets
     train_df, val_df, test_df = load_cadec_data()
     
+    # Find positive samples
+    positive_samples = train_df[train_df['absa1'] == 2]
+    non_positive_samples = train_df[train_df['absa1'] != 2]
+
+    # Oversample positive class 
+    oversampling_factor = len(non_positive_samples) // len(positive_samples)
+    oversampled_positives = pd.concat([positive_samples] * oversampling_factor)
+
+    # Combine to create balanced dataset
+    balanced_train_df = pd.concat([non_positive_samples, oversampled_positives])
+    print(f"Original distribution: {len(positive_samples)} positive, {len(non_positive_samples)} non-positive")
+    print(f"Balanced distribution: {len(oversampled_positives)} positive, {len(non_positive_samples)} non-positive")
+
     # Prepare datasets for Hugging Face
-    train_dataset = prepare_dataset_for_hf(train_df)
+    train_dataset = prepare_dataset_for_hf(balanced_train_df)
     val_dataset = prepare_dataset_for_hf(val_df)
     test_dataset = prepare_dataset_for_hf(test_df)
     
