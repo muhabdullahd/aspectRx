@@ -43,3 +43,4 @@ ENV/
 Thumbs.db
 
 paper
+.DS_Store

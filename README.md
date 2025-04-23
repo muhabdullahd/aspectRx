@@ -56,6 +56,14 @@ The primary ABSA model uses DistilBERT, a lightweight transformer model, fine-tu
 - Classification head for sentiment prediction
 - Custom data preprocessing for aspect extraction
 
+
+### Data Processing
+
+To process the CADEC dataset and generate ABSA-compatible files:
+
+1. Download the CADEC dataset and place it in the `Cadec_Data/` folder
+2. Run the processing script:
+
 ## Setup and Installation
 ```bash
 # Clone the repository
@@ -115,3 +123,21 @@ This project is licensed under the terms of the LICENSE file included in the rep
 ## Acknowledgments
 - This project was developed as a final project for the Machine Learning course.
 - The dataset is based on the SemEval-2016 restaurant reviews dataset.
+
+### Folder Structure
+
+- `utils/data_utils_cadec.py`: Utilities to process CADEC annotations
+- `scripts/process_cadec_data.py`: Script to generate processed datasets
+- `dataset_stats/`: Visualizations and statistics of the processed dataset
+
+### Output Files
+
+The script generates these files in the `Dataset/` folder:
+- `cadec_absa_train.tsv`: Training set
+- `cadec_absa_val.tsv`: Validation set
+- `cadec_absa_test.tsv`: Test set
+- Additional `*_full.tsv` files with extended metadata
+
+### Note
+
+The CADEC dataset is not included in this repository due to size constraints. Please download it separately.
