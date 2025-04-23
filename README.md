@@ -24,17 +24,17 @@ This repository contains an implementation of Aspect-Based Sentiment Analysis (A
 
 ## Repository Structure
 ```
-dsa-absa/
-├── Dataset/               # Restaurant reviews dataset with ABSA annotations
+aspectRx/
+├── Cadec_Data/            # CADEC dataset (CSIRO Adverse Drug Event Corpus)
+├── Dataset/               # Processed CADEC dataset with ABSA annotations
 ├── dataset_stats/         # Visualizations of dataset characteristics
 ├── evaluation/            # Evaluation scripts and metrics
 ├── logs/                  # Training logs
 ├── models/                # Model implementations
 │   ├── absa/              # Transformer-based ABSA models
-│   ├── baseline/          # Naive Bayes baseline models
-│   └── svm/               # SVM baseline models
+│   ├── baseline/          # Naive Bayes baseline models for CADEC
+│   └── svm/               # SVM baseline models for CADEC
 ├── results/               # Model checkpoints and evaluation results
-├── saved_model/           # Best performing models
 ├── scripts/               # Utility scripts for visualization and analysis
 ├── training_plots/        # Training performance visualizations
 └── utils/                 # Utility functions for data processing
@@ -109,20 +109,13 @@ python plot_training_stats.py
 ```
 
 ## Results
-The transformer-based ABSA model achieves superior performance compared to baseline models:
-
-| Model | Accuracy | F1 Score |
-|-------|----------|----------|
-| DistilBERT ABSA | ~0.85 | ~0.84 |
-| Naive Bayes | ~0.70 | ~0.68 |
-| SVM | ~0.75 | ~0.74 |
 
 ## License
 This project is licensed under the terms of the LICENSE file included in the repository.
 
 ## Acknowledgments
 - This project was developed as a final project for the Machine Learning course.
-- The dataset is based on the SemEval-2016 restaurant reviews dataset.
+- The project utilizes the CADEC (CSIRO Adverse Drug Event Corpus) dataset for healthcare and medication reviews.
 
 ### Folder Structure
 
