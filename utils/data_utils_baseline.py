@@ -5,10 +5,15 @@ from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
 
 dataset_folder = os.path.join(os.path.dirname(__file__), "..", "Dataset")
-data_path = os.path.join(dataset_folder, "Restaurant_Reviews.tsv")
+data_path = os.path.join(dataset_folder, "cadec_absa_train.tsv")  # Using CADEC dataset instead
 
-# Read the TSV file into a DataFrame
-data = pd.read_csv(data_path, delimiter='\t')
+# Read the TSV file into a DataFrame (Note: This will be modified to use CADEC properly)
+# This is just a placeholder since Restaurant_Reviews.tsv was removed
+try:
+    data = pd.read_csv(data_path, delimiter='\t')
+except FileNotFoundError:
+    print("Warning: Using empty DataFrame as placeholder since dataset file was not found")
+    data = pd.DataFrame(columns=['tokens', 'absa1'])
 
 # Preprocess the data
 def preprocess_text(text):

@@ -22,21 +22,24 @@ def load_absa_test_dataset(file_path):
 
 def main():
     try:
-        # First load training data to get the same vectorizer
-        train_data = pd.read_csv("Dataset/Restaurant_Reviews.tsv", delimiter="\t")
+        # First load CADEC training data
+        train_data = pd.read_csv("Dataset/cadec_absa_train.tsv", delimiter="\t")
         
         # Initialize and fit vectorizer on training reviews
         vectorizer = CountVectorizer(max_features=2000)
-        X_train = vectorizer.fit_transform(train_data['Review']).toarray()
-        y_train = train_data['Liked'].values
+        # Convert tokens from string representation to actual text for vectorization
+        train_texts = train_data['tokens'].apply(lambda x: " ".join(eval(x)) if isinstance(x, str) else x)
+        X_train = vectorizer.fit_transform(train_texts).toarray()
+        # Extract sentiment labels from absa1 column
+        y_train = train_data['absa1'].apply(lambda x: 1 if "2" in str(x) else 0).values
         
         # Train model
         from sklearn.naive_bayes import MultinomialNB
         model = MultinomialNB()
         model.fit(X_train, y_train)
         
-        # Load and preprocess ABSA test data
-        absa_test_path = "Dataset/rest16_quad_test_cleaned.tsv"
+        # Load and preprocess CADEC test data
+        absa_test_path = "Dataset/cadec_absa_test.tsv"
         absa_test_df = load_absa_test_dataset(absa_test_path)
         
         # Transform ABSA test text using the same vectorizer

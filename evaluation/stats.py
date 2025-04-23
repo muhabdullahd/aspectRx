@@ -6,9 +6,9 @@ import ast
 
 # === Set dataset folder path ===
 dataset_dir = "Dataset"  # Update if needed
-train_file = os.path.join(dataset_dir, "rest16_quad_train_cleaned.tsv")
-dev_file   = os.path.join(dataset_dir, "rest16_quad_dev_cleaned.tsv")
-test_file  = os.path.join(dataset_dir, "rest16_quad_test_cleaned.tsv")
+train_file = os.path.join(dataset_dir, "cadec_absa_train.tsv")
+dev_file   = os.path.join(dataset_dir, "cadec_absa_val.tsv")
+test_file  = os.path.join(dataset_dir, "cadec_absa_test.tsv")
 
 # === Load datasets ===
 train_df = pd.read_csv(train_file, sep="\t")

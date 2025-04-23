@@ -14,9 +14,9 @@ from utils.MetricCallback import MetricsCallback
 from utils.data_utils_absa import preprocess_for_absa
 
 # === 1. Load and Preprocess Data ===
-train_df = pd.read_csv("../../Dataset/rest16_quad_train_cleaned.tsv", delimiter="\t")
-dev_df   = pd.read_csv("../../Dataset/rest16_quad_dev_cleaned.tsv", delimiter="\t")
-test_df  = pd.read_csv("../../Dataset/rest16_quad_test_cleaned.tsv", delimiter="\t")
+train_df = pd.read_csv("../../Dataset/cadec_absa_train.tsv", delimiter="\t")
+dev_df   = pd.read_csv("../../Dataset/cadec_absa_val.tsv", delimiter="\t")
+test_df  = pd.read_csv("../../Dataset/cadec_absa_test.tsv", delimiter="\t")
 
 train_df, dev_df, test_df = preprocess_for_absa(train_df, dev_df, test_df)
 
