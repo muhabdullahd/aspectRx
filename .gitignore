@@ -3,3 +3,16 @@
 *.bin
 *.pkl
 *.tfevents
+*.safetensors
+
+# Exclude entire checkpoint folders and model directories
+results/cadec-absa/checkpoint-*/
+results/cadec-absa/cadec-absa-model/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Mac OS files
+.DS_Store
