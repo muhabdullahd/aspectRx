@@ -1,48 +1,5 @@
-# Ignore large data files
-*.tsv
-*.csv
-*.json
-*.pkl
+# Exclude large files from being pushed
 *.pt
 *.bin
-
-# Allow specific small data files that should be tracked
-!requirements.txt
-!package.json
-!package-lock.json
-
-# Ignore the entire Cadec_Data folder (large raw data)
-/Cadec_Data/
-Dataset/
-
-# Keep processed statistics but not raw data
-!/dataset_stats/*.txt
-!/dataset_stats/*.png
-
-# Python cache files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
-
-# Virtual environments
-venv/
-env/
-ENV/
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS specific files
-.DS_Store
-Thumbs.db
-
-paper
-.DS_Store
+*.pkl
+*.tfevents
