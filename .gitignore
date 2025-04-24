@@ -43,3 +43,5 @@ ENV/
 Thumbs.db
 
 paper
+results/cadec-absa/checkpoint-*/optimizer.pt
+results/cadec-absa/checkpoint-*/
