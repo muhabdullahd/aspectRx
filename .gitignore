@@ -1,21 +1,29 @@
-# Ignore large data files
-*.tsv
-*.csv
-*.json
+# Ignore large binary/model/log files
+*.bin
+*.h5
+*.ckpt
+*.pt
 *.pkl
+*.model
+*.npy
+*.npz
+*.tar
+*.zip
+*.gz
+*.sav
+*.log
+*.pdf
 
-# Allow specific small data files that should be tracked
-!requirements.txt
-!package.json
-!package-lock.json
+# TensorBoard event files
+logs/**/events.out.tfevents.*
+training_plots/**/events.out.tfevents.*
 
-# Ignore the entire Cadec_Data folder (large raw data)
-/Cadec_Data/
-Dataset/
-
-# Keep processed statistics but not raw data
-!/dataset_stats/*.txt
+# Ignore all PNGs except dataset_stats (already handled)
 !/dataset_stats/*.png
+
+# Ignore results and model outputs
+results/
+models/**/results/
 
 # Python cache files
 __pycache__/
