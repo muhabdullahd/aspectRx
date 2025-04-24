@@ -3,6 +3,8 @@
 *.csv
 *.json
 *.pkl
+*.pt
+*.bin
 
 # Allow specific small data files that should be tracked
 !requirements.txt
