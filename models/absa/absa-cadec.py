@@ -81,19 +81,25 @@ class WeightedLossTrainer(Trainer):
 def load_cadec_data():
     """Load the CADEC ABSA datasets."""
     print("Loading CADEC ABSA datasets...")
-    
-    train_df = pd.read_csv("../../Dataset/cadec_absa_train.tsv", delimiter="\t")
-    val_df = pd.read_csv("../../Dataset/cadec_absa_val.tsv", delimiter="\t")
-    test_df = pd.read_csv("../../Dataset/cadec_absa_test.tsv", delimiter="\t")
-    
+    # Use absolute path based on script location
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    dataset_dir = os.path.abspath(os.path.join(script_dir, '../../Dataset'))
+    train_path = os.path.join(dataset_dir, 'cadec_absa_train.tsv')
+    val_path = os.path.join(dataset_dir, 'cadec_absa_val.tsv')
+    test_path = os.path.join(dataset_dir, 'cadec_absa_test.tsv')
+
+    train_df = pd.read_csv(train_path, delimiter="\t")
+    val_df = pd.read_csv(val_path, delimiter="\t")
+    test_df = pd.read_csv(test_path, delimiter="\t")
+
     # Convert tokens column from string representation to actual lists
     for df in [train_df, val_df, test_df]:
         df['tokens'] = df['tokens'].apply(lambda x: x.strip('[]').replace("'", "").split(', '))
-    
+
     print(f"Train: {len(train_df)} samples")
     print(f"Validation: {len(val_df)} samples")
     print(f"Test: {len(test_df)} samples")
-    
+
     return train_df, val_df, test_df
 
 def prepare_dataset_for_hf(df):
