@@ -1,10 +1,15 @@
 import streamlit as st
+import sys
 import torch
 from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
 import numpy as np
 import spacy
 from lime.lime_text import LimeTextExplainer
 import os
+
+# Prevent Streamlit from watching torch.classes
+if hasattr(torch, '_classes'):
+    sys.modules['torch._classes'] = None
 
 # Load spaCy model for aspect extraction
 nlp = spacy.load("en_core_web_sm")
@@ -16,7 +21,6 @@ MAX_LENGTH = 256
 
 # Load model and tokenizer
 @st.cache_resource
-
 def load_model():
     device = torch.device('cpu')
     model = DistilBertForSequenceClassification.from_pretrained(MODEL_PATH)
