@@ -231,6 +231,10 @@ def evaluate_model(trainer, tokenized_test, test_df, threshold=0.5): # Add test_
     plt.savefig(os.path.join(LOG_DIR, 'confusion_matrix_optimal.png'))
     
     # --- Save detailed predictions with aspect categories ---
+    # Add print statements to check lengths
+    print(f"DEBUG: Length of test_df passed to evaluate_model: {len(test_df)}")
+    print(f"DEBUG: Length of prediction labels: {len(labels)}")
+    
     # Ensure test_df has the same length as predictions
     if len(test_df) == len(labels):
         pred_df = pd.DataFrame({
@@ -238,9 +242,30 @@ def evaluate_model(trainer, tokenized_test, test_df, threshold=0.5): # Add test_
             'predicted_label': preds,
             'aspect_category': test_df['absa3'].values # Use 'absa3' column for aspect category
         })
-        pred_output_path = os.path.join(OUTPUT_DIR, 'test_predictions_with_aspects.csv')
-        pred_df.to_csv(pred_output_path, index=False)
-        print(f"Detailed predictions saved to {pred_output_path}")
+        
+        # --- Construct Absolute Path ---
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        absolute_output_dir = os.path.abspath(os.path.join(script_dir, OUTPUT_DIR)) # Make OUTPUT_DIR absolute
+        pred_output_path = os.path.join(absolute_output_dir, 'test_predictions_with_aspects.csv') # Use absolute dir
+        # --- End Absolute Path ---
+
+        print(f"DEBUG: Attempting to save CSV to absolute path: {pred_output_path}") # UPDATED
+        try: 
+            # Ensure the directory exists before saving
+            os.makedirs(absolute_output_dir, exist_ok=True) # ADDED directory creation check
+            pred_df.to_csv(pred_output_path, index=False)
+            print(f"DEBUG: Successfully completed pred_df.to_csv()") 
+            
+            # --- Check if file exists immediately after saving ---
+            if os.path.exists(pred_output_path): # ADDED check
+                print(f"DEBUG: os.path.exists confirms file exists at: {pred_output_path}") # ADDED check
+            else: # ADDED check
+                print(f"ERROR: os.path.exists CANNOT find file immediately after saving at: {pred_output_path}") # ADDED check
+            # --- End check ---
+
+            print(f"Detailed predictions saved to {pred_output_path}")
+        except Exception as e: 
+            print(f"ERROR: Failed to save CSV file: {e}") 
     else:
         print(f"Warning: Length mismatch between test_df ({len(test_df)}) and predictions ({len(labels)}). Skipping detailed prediction saving.")
     # --- End saving predictions ---

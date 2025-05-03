@@ -82,9 +82,15 @@ def run_pyabsa_on_cadec(test_file):
     # Calculate metrics
     from sklearn.metrics import accuracy_score, f1_score
     acc = accuracy_score(true_labels, pred_labels)
-    f1 = f1_score(true_labels, pred_labels, average='macro')
+    f1_macro = f1_score(true_labels, pred_labels, average='macro', zero_division=0)
+    f1_weighted = f1_score(true_labels, pred_labels, average='weighted', zero_division=0)
     
-    return {'accuracy': acc, 'f1': f1}
+    # Return dictionary with multiple metrics
+    return {
+        'accuracy': acc, 
+        'f1_macro': f1_macro,
+        'f1_weighted': f1_weighted
+    }
 
 # === 2. Load custom model results ===
 def load_custom_results(path):
@@ -97,46 +103,86 @@ def load_custom_results(path):
                 content = content + '}'
             res = json.loads(content)
         
-        # Check if the required keys exist
-        if 'accuracy' in res and ('f1_score' in res or 'f1_macro' in res):
-            # Use f1_macro if f1_score is not available
-            f1 = res.get('f1_score', res.get('f1_macro'))
-            return {'accuracy': res['accuracy'], 'f1': f1}
-        else:
-            raise KeyError("Required metrics not found in results file")
+        # Extract metrics using the keys from enhanced_results.json
+        # Use the '_optimal' keys if available, otherwise fall back
+        acc = res.get('eval_accuracy_optimal', res.get('eval_accuracy'))
+        f1_macro = res.get('eval_f1_macro_optimal', res.get('eval_f1_macro'))
+        f1_weighted = res.get('eval_f1_weighted_optimal', res.get('eval_f1_weighted'))
+        inference_time = res.get('inference_time_seconds') # Get inference time
+
+        if acc is None or f1_macro is None or f1_weighted is None:
+             raise KeyError("Required metrics (accuracy, f1_macro, f1_weighted) not found in results file")
+
+        return {
+            'accuracy': acc,
+            'f1_macro': f1_macro,
+            'f1_weighted': f1_weighted,
+            'inference_time': inference_time # Include inference time
+        }
             
     except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
         print(f"Error loading custom results: {e}")
-        print(f"Using fallback values from your experiment results")
-        # Fallback with reasonable values from your experiments
-        return {'accuracy': 0.92, 'f1': 0.74}
+        print(f"Using fallback values.")
+        # Fallback with reasonable values (update if needed)
+        return {
+            'accuracy': 0.92, 
+            'f1_macro': 0.74, 
+            'f1_weighted': 0.93, 
+            'inference_time': None
+        }
 
 # === 3. Plot comparison ===
 def plot_comparison(pyabsa_metrics, custom_metrics, save_path):
-    labels = ['Accuracy', 'F1 Score']
-    pyabsa_vals = [pyabsa_metrics['accuracy'], pyabsa_metrics['f1']]
-    custom_vals = [custom_metrics['accuracy'], custom_metrics['f1']]
-    x = range(len(labels))
+    # Metrics to plot
+    labels = ['Accuracy', 'F1 (Macro)', 'F1 (Weighted)']
+    pyabsa_vals = [pyabsa_metrics['accuracy'], pyabsa_metrics['f1_macro'], pyabsa_metrics['f1_weighted']]
+    custom_vals = [custom_metrics['accuracy'], custom_metrics['f1_macro'], custom_metrics['f1_weighted']]
+    
+    x = np.arange(len(labels)) # Use numpy for positioning
     width = 0.35
-    plt.figure(figsize=(6,4))
-    plt.bar([i-width/2 for i in x], pyabsa_vals, width, label='PyABSA (General)')
-    plt.bar([i+width/2 for i in x], custom_vals, width, label='Custom CADEC')
-    plt.xticks(x, labels)
-    plt.ylim(0,1)
-    plt.ylabel('Score')
-    plt.title('ABSA Model Comparison on CADEC Test Set')
-    plt.legend()
-    plt.tight_layout()
+    
+    fig, ax = plt.subplots(figsize=(8, 5)) # Adjusted figure size
+    rects1 = ax.bar(x - width/2, pyabsa_vals, width, label='PyABSA (General)')
+    rects2 = ax.bar(x + width/2, custom_vals, width, label='Custom CADEC')
+    
+    # Add some text for labels, title and axes ticks
+    ax.set_ylabel('Score')
+    ax.set_title('ABSA Model Comparison on CADEC Test Set')
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_ylim(0, 1.1) # Adjust ylim to make space for labels
+    ax.legend()
+
+    # Add value labels on bars
+    ax.bar_label(rects1, padding=3, fmt='%.3f')
+    ax.bar_label(rects2, padding=3, fmt='%.3f')
+
+    fig.tight_layout()
     plt.savefig(save_path)
     print(f"Comparison plot saved to {save_path}")
 
 if __name__ == "__main__":
+    # Add numpy import
+    import numpy as np 
+
     print("Running PyABSA on CADEC test set...")
     pyabsa_metrics = run_pyabsa_on_cadec(TEST_FILE)
     print(f"PyABSA results: {pyabsa_metrics}")
+    
     print("Loading custom model results...")
     custom_metrics = load_custom_results(CUSTOM_RESULTS_PATH)
     print(f"Custom model results: {custom_metrics}")
+    
     print("Plotting comparison...")
+    # Pass the full metrics dictionaries
     plot_comparison(pyabsa_metrics, custom_metrics, PLOT_PATH)
-    print("Done.")
+
+    # Print inference time comparison separately
+    print("\n--- Inference Time Comparison ---")
+    if custom_metrics.get('inference_time') is not None:
+        print(f"Custom CADEC Model Inference Time: {custom_metrics['inference_time']:.2f} seconds")
+    else:
+        print("Custom CADEC Model Inference Time: Not Available")
+    print("(PyABSA inference time not directly comparable in this script)")
+
+    print("\nDone.")

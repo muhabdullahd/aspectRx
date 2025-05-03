@@ -66,16 +66,22 @@ for name, group in aspect_groups:
 
 results_df = pd.DataFrame(results).sort_values(by='Support', ascending=False)
 
-# Print summary table
-print("\n--- Metrics per Aspect Category ---")
+# --- Filter for Top N aspects for plotting ---
+N_TOP_ASPECTS = 15
+plot_df = results_df.head(N_TOP_ASPECTS)
+
+# Print summary table (show all aspects)
+print("\n--- Metrics per Aspect Category (All) ---")
 print(results_df.to_string(index=False, float_format="%.4f"))
 
-# --- Generate Plots ---
+# --- Generate Plots (Top N Aspects) ---
+print(f"\n--- Generating plots for Top {N_TOP_ASPECTS} Aspects ---")
 
 # Plot Accuracy per Aspect
-plt.figure(figsize=(12, 7))
-sns.barplot(data=results_df, x='Accuracy', y='Aspect Category', palette='viridis')
-plt.title('Accuracy per Aspect Category (Domain)')
+plt.figure(figsize=(10, 8)) # Adjusted figure size
+# Use plot_df for plotting
+sns.barplot(data=plot_df, x='Accuracy', y='Aspect Category', hue='Aspect Category', palette='viridis', legend=False)
+plt.title(f'Top {N_TOP_ASPECTS} Aspects: Accuracy per Category (Domain)')
 plt.xlabel('Accuracy')
 plt.ylabel('Aspect Category')
 plt.xlim(0, 1)
@@ -86,9 +92,10 @@ print(f"\nAccuracy plot saved to: {acc_plot_path}")
 plt.close()
 
 # Plot F1 (Macro) per Aspect
-plt.figure(figsize=(12, 7))
-sns.barplot(data=results_df, x='F1 (Macro)', y='Aspect Category', palette='magma')
-plt.title('F1 Score (Macro) per Aspect Category (Domain)')
+plt.figure(figsize=(10, 8)) # Adjusted figure size
+# Use plot_df for plotting
+sns.barplot(data=plot_df, x='F1 (Macro)', y='Aspect Category', hue='Aspect Category', palette='magma', legend=False)
+plt.title(f'Top {N_TOP_ASPECTS} Aspects: F1 Score (Macro) per Category (Domain)')
 plt.xlabel('F1 Score (Macro)')
 plt.ylabel('Aspect Category')
 plt.xlim(0, 1)
@@ -114,6 +121,8 @@ if inference_time is not None:
         print(f"Average Time per Sample: {time_per_sample:.2f} ms")
 else:
     print("Inference time not found in metrics file.")
+    # Add debug print for available keys
+    print(f"DEBUG: Keys available in metrics_data: {list(metrics_data.keys())}")
 
 print("\nDomain analysis complete.")
 
