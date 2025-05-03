@@ -182,6 +182,20 @@ This will output the metrics for both models and save the comparison plot.
 - Dataset statistics visualizations: `dataset_stats/`
 - LIME and SHAP explanations in their respective folders (`lime_explanations/`, `shap_explanations/`)
 
+### Key Result Visualizations
+
+**ABSA Model Comparison (Custom vs. PyABSA General)**
+![ABSA Model Comparison](results/absa_comparison.png)
+*Comparison of Accuracy, F1 (Macro), and F1 (Weighted) scores between the custom domain-specific model and a general PyABSA model on the CADEC test set.*
+
+**Top 15 Aspects: F1 Score (Macro) per Category**
+![Top 15 Aspects F1 Score](results/domain_analysis/top_15_aspects_f1_score.png)
+*Macro F1 scores for the top 15 most frequent aspect categories, showing model performance across different types of feedback (e.g., specific drugs, side effects like pain, weakness).*
+
+**Top 15 Aspects: Accuracy per Category**
+![Top 15 Aspects Accuracy](results/domain_analysis/top_15_aspects_accuracy.png)
+*Accuracy scores for the top 15 most frequent aspect categories, providing another view of model performance on specific aspects.*
+
 ## License
 This project is licensed under the terms of the LICENSE file included in the repository.
 
