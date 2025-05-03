@@ -9,6 +9,7 @@ import torch
 import os
 import sys
 import re
+import time # Add time import
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_recall_curve
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -24,6 +25,7 @@ from transformers import (
     EarlyStoppingCallback,
 )
 from datasets import Dataset, DatasetDict
+import json
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -157,118 +159,34 @@ def compute_metrics(pred):
         "f1_weighted": f1_weighted
     }
 
-def train_cadec_model(train_dataset, val_dataset):
-    """Train CADEC ABSA model and return trainer and metrics"""
+def train_cadec_model(trainer, metrics_callback): # Accept trainer and callback
+    """Train CADEC ABSA model using the provided trainer."""
     
-    # Model setup
-    model = DistilBertForSequenceClassification.from_pretrained(
-        "distilbert-base-uncased",
-        num_labels=2,  # Binary classification (positive/negative)
-    )
-    
-    # Training arguments
-    training_args = TrainingArguments(
-        output_dir="../../results/cadec-absa",
-        num_train_epochs=3,
-        per_device_train_batch_size=16,
-        per_device_eval_batch_size=64,
-        warmup_steps=500,
-        weight_decay=0.01,
-        logging_dir="../../logs/cadec-absa",
-        logging_steps=50,
-        save_steps=10000000,  # Very large number instead of infinity
-        # Remove load_best_model_at_end since it requires matching eval and save strategies
-        # load_best_model_at_end=True,
-        # metric_for_best_model="f1_weighted",
-        greater_is_better=True,
-    )
-    
-    # Create list to store evaluation metrics manually
-    eval_metrics = []
-    
-    # Define compute_metrics function
-    def compute_metrics(pred):
-        labels = pred.label_ids
-        preds = pred.predictions.argmax(-1)
-        
-        # Standard metrics
-        accuracy = accuracy_score(labels, preds)
-        
-        # Use multiple F1 score calculations for imbalanced data
-        f1 = f1_score(labels, preds)  # Standard binary F1
-        f1_macro = f1_score(labels, preds, average='macro')
-        f1_weighted = f1_score(labels, preds, average='weighted')
-        
-        # Store metrics
-        current_metrics = {
-            "accuracy": float(accuracy),
-            "f1": float(f1),
-            "f1_macro": float(f1_macro),
-            "f1_weighted": float(f1_weighted),
-            "step": len(eval_metrics) + 1
-        }
-        eval_metrics.append(current_metrics)
-        
-        return {
-            "accuracy": accuracy,
-            "f1": f1,
-            "f1_macro": f1_macro,
-            "f1_weighted": f1_weighted
-        }
-    
-    # Calculate class weights for the model
-    # Get labels from the dataset
-    labels = [train_dataset[i]["label"] for i in range(len(train_dataset))]
-    
-    # Compute class weights
-    class_weights = compute_class_weight(
-        class_weight='balanced',
-        classes=np.unique(labels),
-        y=labels
-    )
-    print(f"Class weights: {class_weights}")
-    
-    # Convert to tensor and move to appropriate device
-    class_weights_tensor = torch.tensor(class_weights, dtype=torch.float)
-    device = torch.device('mps') if torch.backends.mps.is_available() else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    class_weights_tensor = class_weights_tensor.to(device)
-    
-    # Create trainer with class weights
-    trainer = WeightedLossTrainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=val_dataset,
-        compute_metrics=compute_metrics,
-        class_weights=class_weights_tensor,
-    )
-    
+    print("Starting model training...")
     # Train the model
     train_result = trainer.train()
     
     # Extract training metrics
     train_metrics = train_result.metrics
     
-    # Create pandas DataFrame from collected metrics
-    metrics_df = pd.DataFrame(eval_metrics)
-    
-    # Save model
-    model_save_path = "../../results/cadec-absa/cadec-absa-model"
-    save_checkpoint_to_cpu(trainer, model_save_path)
-    print(f"Model saved to {model_save_path}")
+    # Create pandas DataFrame from collected metrics via callback
+    metrics_df = pd.DataFrame(metrics_callback.metrics_list) # Use callback data
     
     # Print final training metrics
     print(f"Training metrics: {train_metrics}")
     
-    return trainer, metrics_df
+    # Return only the metrics DataFrame (trainer is already available in main)
+    return metrics_df 
 
-def evaluate_model(trainer, tokenized_test, threshold=0.5):
-    """Evaluate the trained model on the test set."""
+def evaluate_model(trainer, tokenized_test, test_df, threshold=0.5): # Add test_df argument
+    """Evaluate the trained model on the test set and save detailed predictions.""" # Updated docstring
     print("Evaluating model on test set...")
-    results = trainer.evaluate(tokenized_test)
     
-    # Get predictions
+    start_time = time.time() # Start timing inference
     predictions = trainer.predict(tokenized_test)
+    inference_time = time.time() - start_time # Calculate inference time
+    print(f"Inference time: {inference_time:.2f} seconds")
+
     labels = predictions.label_ids
     
     # Apply custom threshold if not using default
@@ -312,13 +230,30 @@ def evaluate_model(trainer, tokenized_test, threshold=0.5):
     plt.tight_layout()
     plt.savefig(os.path.join(LOG_DIR, 'confusion_matrix_optimal.png'))
     
-    # Update results dictionary with new metrics
+    # --- Save detailed predictions with aspect categories ---
+    # Ensure test_df has the same length as predictions
+    if len(test_df) == len(labels):
+        pred_df = pd.DataFrame({
+            'true_label': labels,
+            'predicted_label': preds,
+            'aspect_category': test_df['absa3'].values # Use 'absa3' column for aspect category
+        })
+        pred_output_path = os.path.join(OUTPUT_DIR, 'test_predictions_with_aspects.csv')
+        pred_df.to_csv(pred_output_path, index=False)
+        print(f"Detailed predictions saved to {pred_output_path}")
+    else:
+        print(f"Warning: Length mismatch between test_df ({len(test_df)}) and predictions ({len(labels)}). Skipping detailed prediction saving.")
+    # --- End saving predictions ---
+
+    # Update results dictionary with new metrics and inference time
+    results = trainer.evaluate(tokenized_test) # Re-evaluate to get standard results dict structure
     results.update({
-        'eval_accuracy': accuracy,
-        'eval_f1': f1,
-        'eval_f1_macro': f1_macro,
-        'eval_f1_weighted': f1_weighted,
-        'threshold': threshold
+        'eval_accuracy_optimal': accuracy, # Use different keys for optimal threshold metrics
+        'eval_f1_optimal': f1,
+        'eval_f1_macro_optimal': f1_macro,
+        'eval_f1_weighted_optimal': f1_weighted,
+        'optimal_threshold': threshold,
+        'inference_time_seconds': inference_time # Add inference time
     })
     
     return results
@@ -522,32 +457,24 @@ def main():
     # Load the CADEC ABSA datasets
     train_df, val_df, test_df = load_cadec_data()
     
+    # --- Data Preparation and Balancing (Keep as is) ---
     # Find positive samples
     positive_samples = train_df[train_df['absa1'] == 2]
     non_positive_samples = train_df[train_df['absa1'] != 2]
-    
     print(f"Original distribution: {len(positive_samples)} positive, {len(non_positive_samples)} non-positive")
-    
-    # 1. Text augmentation for positive samples
+    # 1. Text augmentation
     print("Performing text augmentation for the minority class...")
     train_df["text_input"] = train_df.apply(
-        lambda row: f"{' '.join(row['tokens'])} [SEP] {row['absa2']} [SEP] {str(row['absa3'])}",
-        axis=1
+        lambda row: f"{' '.join(row['tokens'])} [SEP] {row['absa2']} [SEP] {str(row['absa3'])}", axis=1
     )
     train_df["label"] = train_df["absa1"].apply(lambda x: 1 if x == 2 else 0)
-    
-    # Apply text augmentation
-    train_df = augment_minority_class(train_df, n_samples=3)  # Generate 3 augmented samples per positive review
-    
-    # 2. SMOTE oversampling (more sophisticated than simple duplication)
+    train_df = augment_minority_class(train_df, n_samples=3)
+    # 2. SMOTE oversampling
     train_df = enhance_dataset_with_features(train_df)
-    
-    # Prepare feature matrix for SMOTE
     feature_cols = ["contains_side_effect", "contains_benefit", "high_severity", 
                    "contains_negation", "contains_comparison", "discontinued"]
     X_features = train_df[feature_cols].values
     y_labels = train_df["label"].values
-    
     print("Applying SMOTE oversampling...")
     try:
         smote = SMOTE(random_state=42)
@@ -584,18 +511,17 @@ def main():
         balanced_rows = list(train_df.iloc[balanced_indices].iterrows())
         for sample in new_samples:
             balanced_rows.append((None, sample))
-        
         balanced_train_df = pd.DataFrame([row for _, row in balanced_rows])
         
         print(f"After SMOTE: {sum(y_resampled==1)} positive, {sum(y_resampled==0)} non-positive")
     except Exception as e:
         print(f"SMOTE error: {e}. Falling back to original oversampling.")
-        # Fallback to simple oversampling if SMOTE fails
-        oversampling_factor = len(non_positive_samples) // len(positive_samples)
-        oversampled_positives = pd.concat([positive_samples] * oversampling_factor)
+        oversampling_factor = max(1, len(non_positive_samples) // len(positive_samples)) # Ensure factor is at least 1
+        oversampled_positives = pd.concat([positive_samples] * oversampling_factor) if len(positive_samples) > 0 else pd.DataFrame()
         balanced_train_df = pd.concat([non_positive_samples, oversampled_positives])
-        print(f"Balanced distribution: {len(oversampled_positives)} positive, {len(non_positive_samples)} non-positive")
-    
+        print(f"Balanced distribution: {len(balanced_train_df[balanced_train_df['label']==1])} positive, {len(balanced_train_df[balanced_train_df['label']==0])} non-positive")
+    # --- End Data Preparation ---
+
     # Prepare datasets for Hugging Face
     train_dataset = prepare_dataset_for_hf(balanced_train_df)
     val_dataset = prepare_dataset_for_hf(val_df)
@@ -608,35 +534,119 @@ def main():
     tokenized_train = tokenize_dataset(train_dataset, tokenizer)
     tokenized_val = tokenize_dataset(val_dataset, tokenizer)
     tokenized_test = tokenize_dataset(test_dataset, tokenizer)
-    
-    # Train the model
-    trainer, metrics_df = train_cadec_model(tokenized_train, tokenized_val)
-    
-    # Plot training metrics
-    plot_training_metrics(metrics_df)
-    
+
+    # --- Initialize Model, Training Args, Trainer ---
+    # Training arguments (consistent for loading or training)
+    training_args = TrainingArguments(
+        output_dir=OUTPUT_DIR, # Use OUTPUT_DIR for checkpoints etc.
+        num_train_epochs=EPOCHS,
+        per_device_train_batch_size=BATCH_SIZE,
+        per_device_eval_batch_size=64,
+        warmup_steps=500,
+        weight_decay=WEIGHT_DECAY,
+        learning_rate=LEARNING_RATE, # Add learning rate
+        logging_dir=LOG_DIR, # Use LOG_DIR
+        logging_steps=50,
+        eval_strategy="steps", # Evaluate periodically
+        eval_steps=100, # Evaluate every 100 steps
+        save_strategy="steps", # Save based on steps
+        save_steps=100, # Save checkpoint every 100 steps
+        load_best_model_at_end=True, # Load the best model found during training
+        metric_for_best_model="f1_weighted", # Use f1_weighted to select best model
+        greater_is_better=True,
+        save_total_limit=2 # Keep only the best and the latest checkpoint
+    )
+
+    # Calculate class weights
+    labels = [train_dataset[i]["label"] for i in range(len(train_dataset))]
+    class_weights = compute_class_weight('balanced', classes=np.unique(labels), y=labels)
+    class_weights_tensor = torch.tensor(class_weights, dtype=torch.float)
+    device = torch.device('mps') if torch.backends.mps.is_available() else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    class_weights_tensor = class_weights_tensor.to(device)
+    print(f"Using device: {device}")
+    print(f"Class weights: {class_weights}")
+
+    # Initialize metrics callback
+    metrics_callback = MetricsCallback(METRICS_FILE)
+
+    # Check if a saved model exists
+    if os.path.exists(SAVED_MODEL_PATH) and os.path.isdir(SAVED_MODEL_PATH):
+        print(f"Loading pre-trained model from {SAVED_MODEL_PATH}")
+        model = DistilBertForSequenceClassification.from_pretrained(SAVED_MODEL_PATH)
+        metrics_df = None # No new training metrics when loading
+        
+        # Initialize Trainer with the loaded model
+        trainer = WeightedLossTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=tokenized_train, # Still needed for trainer setup
+            eval_dataset=tokenized_val,
+            compute_metrics=compute_metrics,
+            class_weights=class_weights_tensor,
+            callbacks=[metrics_callback] # Add callback even when loading
+        )
+
+    else:
+        print(f"No pre-trained model found at {SAVED_MODEL_PATH}. Training a new model...")
+        # Model setup (only if training new)
+        model = DistilBertForSequenceClassification.from_pretrained(
+            MODEL_NAME,
+            num_labels=2,
+        )
+        
+        # Initialize Trainer for training
+        trainer = WeightedLossTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=tokenized_train,
+            eval_dataset=tokenized_val,
+            compute_metrics=compute_metrics,
+            class_weights=class_weights_tensor,
+            callbacks=[metrics_callback, EarlyStoppingCallback(early_stopping_patience=3)] # Add early stopping
+        )
+
+        # Train the model
+        metrics_df = train_cadec_model(trainer, metrics_callback) # Pass callback
+
+        # Save the best model after training
+        print(f"Saving the best model to {SAVED_MODEL_PATH}")
+        save_checkpoint_to_cpu(trainer, SAVED_MODEL_PATH) # Save the final best model
+
+    # --- Evaluation ---
+    # Plot training metrics if available (only if training occurred)
+    if metrics_df is not None and not metrics_df.empty:
+        plot_training_metrics(metrics_df)
+
     # Find optimal threshold on validation set
     optimal_threshold = find_optimal_threshold(trainer, tokenized_val)
     
-    # Evaluate the model on test set with optimal threshold
-    test_results = evaluate_model(trainer, tokenized_test, threshold=optimal_threshold)
-    
-    # Save the results with optimal threshold
+    # Evaluate model on test set using optimal threshold
+    # Ensure test_df has the required columns before passing
+    test_df_eval = test_df.copy()
+    if 'absa3' not in test_df_eval.columns:
+         print("Warning: 'absa3' column missing in test_df. Adding dummy column.")
+         # Add a dummy column if it's missing, or handle appropriately
+         test_df_eval['absa3'] = 'Unknown' # Or load it correctly if possible
+         
+    test_results = evaluate_model(trainer, tokenized_test, test_df_eval, threshold=optimal_threshold) # Pass potentially modified test_df
+
+    # Save final evaluation results
     results_path = os.path.join(OUTPUT_DIR, "enhanced_results.json")
     with open(results_path, 'w') as f:
-        import json
-        # Convert NumPy types to Python native types
-        json.dump({
-            "accuracy": float(test_results['eval_accuracy']),
-            "f1_score": float(test_results['eval_f1']),
-            "f1_macro": float(test_results['eval_f1_macro']),
-            "f1_weighted": float(test_results['eval_f1_weighted']),
-            "optimal_threshold": float(optimal_threshold)
-        }, f, indent=2)
-    
-    print("Training and evaluation complete!")
-    print(f"Enhanced model results saved to {results_path}")
-    print(f"Check all results in {OUTPUT_DIR} and visualizations in {LOG_DIR}")
+        serializable_results = {}
+        for k, v in test_results.items():
+            if isinstance(v, (np.float32, np.float64)):
+                serializable_results[k] = float(v)
+            elif isinstance(v, (np.int32, np.int64)):
+                 serializable_results[k] = int(v)
+            else:
+                 serializable_results[k] = v
+        json.dump(serializable_results, f, indent=2)
 
+    print("Processing complete!") # Updated message
+    print(f"Final evaluation results saved to {results_path}")
+    print(f"Checkpoints and logs are in {OUTPUT_DIR} and {LOG_DIR}")
+
+# Add this block to call the main function when the script is run
 if __name__ == "__main__":
     main()

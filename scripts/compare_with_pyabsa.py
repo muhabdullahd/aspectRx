@@ -89,9 +89,22 @@ def run_pyabsa_on_cadec(test_file):
 # === 2. Load custom model results ===
 def load_custom_results(path):
     try:
+        # Try to load the results file
         with open(path, 'r') as f:
-            res = json.load(f)
-        return {'accuracy': res['accuracy'], 'f1': res['f1_score']}
+            content = f.read().strip()
+            # Fix truncated JSON if needed
+            if not content.endswith('}'):
+                content = content + '}'
+            res = json.loads(content)
+        
+        # Check if the required keys exist
+        if 'accuracy' in res and ('f1_score' in res or 'f1_macro' in res):
+            # Use f1_macro if f1_score is not available
+            f1 = res.get('f1_score', res.get('f1_macro'))
+            return {'accuracy': res['accuracy'], 'f1': f1}
+        else:
+            raise KeyError("Required metrics not found in results file")
+            
     except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
         print(f"Error loading custom results: {e}")
         print(f"Using fallback values from your experiment results")
