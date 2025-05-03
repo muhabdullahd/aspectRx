@@ -12,6 +12,7 @@ seaborn>=0.11.0
 
 # NLP utilities
 nltk>=3.6.0
+spacy
 
 # Progress bars
 tqdm>=4.62.0
@@ -27,3 +28,7 @@ colorlog>=6.6.0
 # Optional metrics reporting and logging
 tensorboard>=2.8.0
 wandb>=0.12.0
+
+# Dashboard and explainability features
+streamlit
+lime
